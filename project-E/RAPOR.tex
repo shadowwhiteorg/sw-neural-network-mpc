@@ -1,0 +1,135 @@
+
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=cyan}
+
+\title{Model Predictive Control (MPC) - Öğrenim ve Uygulama Raporu}
+\date{\today}
+\author{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Giriş}
+Model Predictive Control (MPC), sistemin gelecekteki davranışını tahmin ederek en uygun kontrol sinyalini belirleyen ileri seviye bir kontrol yöntemidir. 
+MPC, sistem kısıtlarını (örn: maksimum voltaj, maksimum hız) doğrudan hesaba katabilir ve özellikle elektrikli motorlar, otonom sistemler ve enerji yönetimi alanlarında yaygın olarak kullanılır.
+
+\section{DC Motor Sistem Modeli}
+
+\subsection{Durum Uzayı Temsili}
+Elektriksel Dinamik:
+\begin{equation}
+V(t) = L \frac{di(t)}{dt} + Ri(t) + K_e \omega(t)
+\end{equation}
+Mekanik Dinamik:
+\begin{equation}
+J \frac{d\omega(t)}{dt} + B\omega(t) = K_t i(t)
+\end{equation}
+
+\subsection{Durum Değişkenleri}
+\begin{itemize}
+\item $x_1 = i(t)$ : Akım
+\item $x_2 = \omega(t)$ : Açısal Hız
+\end{itemize}
+
+\subsection{Durum Uzayı Modeli}
+\begin{equation}
+\dot{x} = A x + B u
+\end{equation}
+\begin{equation}
+y = C x + D u
+\end{equation}
+Matrisler:
+\begin{equation}
+A = \begin{bmatrix} -\frac{R}{L} & -\frac{K_e}{L} \\ \frac{K_t}{J} & -\frac{B}{J} \end{bmatrix}, \quad
+B = \begin{bmatrix} \frac{1}{L} \\ 0 \end{bmatrix}, \quad
+C = \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad
+D = 0
+\end{equation}
+
+Sistem MATLAB ortamında diskretize edilerek MPC tasarımı için hazırlandı.
+
+\section{Temel 1-Adım Horizon MPC}
+
+\subsection{Prediction Horizon}
+1 adım.
+
+\subsection{Cost Fonksiyonu}
+\begin{equation}
+J = (y_{k+1} - r)^2 + \lambda u_k^2
+\end{equation}
+
+\subsection{Özellikler}
+\begin{itemize}
+\item Her adımda sadece bir adım ötesi tahmin edildi.
+\item Optimal kontrol sinyali analitik olarak çözüldü.
+\item Kontrol ceza katsayısı (lambda) ayarlanarak sistem davranışı optimize edildi.
+\end{itemize}
+
+\subsection{Sonuçlar}
+\begin{itemize}
+\item Sistem stabil bir şekilde hedef hıza ulaştı.
+\item Kontrol kuvvetinin etkisi doğrudan gözlemlendi.
+\end{itemize}
+
+\section{Multi-Step (5 Adım Horizon) MPC}
+
+\subsection{Prediction Horizon}
+5 adım.
+
+\subsection{Optimization Yöntemi}
+Quadratic Programming (QP) kullanıldı.
+
+\subsection{Cost Fonksiyonu}
+\begin{equation}
+J = \sum_{i=1}^{5} \left( (y_{k+i} - r)^2 + \lambda (u_{k+i-1})^2 \right)
+\end{equation}
+
+\subsection{Özellikler}
+\begin{itemize}
+\item Gelecek 5 adım boyunca sistemin davranışı tahmin edildi.
+\item Optimal voltaj dizisi hesaplandı.
+\item Sadece ilk kontrol sinyali uygulandı (receding horizon mantığı).
+\end{itemize}
+
+\subsection{Sonuçlar}
+\begin{itemize}
+\item Sistem hedefe daha hızlı ve optimize edilmiş bir yol izleyerek ulaştı.
+\item Voltaj kısıtları ([-5V, +5V]) başarıyla uygulandı.
+\item Overshoot ve dalgalanma gözlenmedi.
+\end{itemize}
+
+\section{Sonuçlar ve Gözlemler}
+\begin{itemize}
+\item 1 adım MPC basit ve doğrudan, ancak çok akıllı kararlar veremeyen bir yapı sundu.
+\item Multi-Step MPC, daha planlı ve geleceği optimize ederek sistem davranışını iyileştirdi.
+\item Kontrol ceza katsayısı (lambda) sistemin agresiflik veya sakinliği üzerinde doğrudan etkili oldu.
+\end{itemize}
+
+\section{Kazanımlar ve Gelecek Adımlar}
+
+\subsection{Kazanımlar}
+\begin{itemize}
+\item MPC'nin temel mekanizması ve tahmin modeli anlaşıldı.
+\item Diskretize sistem kullanarak MPC kurulumu öğrenildi.
+\item Quadratic Programming ile optimal kontrol hesaplandı.
+\item Sistem kısıtlarını MPC içine entegre etme pratiği kazanıldı.
+\end{itemize}
+
+\subsection{Potansiyel Gelişimler}
+\begin{itemize}
+\item Prediction horizon artırılarak daha akıllı kontrol.
+\item Soft constraints eklenerek daha esnek sistem yönetimi.
+\item Multi-Input Multi-Output (MIMO) sistemlerde MPC uygulaması.
+\item Realtime MPC simülasyonları ve donanım üzerinde uygulamalar.
+\item Neural Network destekli öğrenen MPC geliştirilmesi.
+\end{itemize}
+
+\end{document}
