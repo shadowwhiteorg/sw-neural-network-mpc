@@ -1,0 +1,134 @@
+
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{Yapay Sinir Ağı Destekli Model Predictive Control Uygulaması}
+\author{Yıldız Akpolat}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Giriş}
+Bu çalışmada, yapay sinir ağı (YSA) destekli bir Model Predictive Control (MPC) uygulaması geliştirilmiştir. Amaç, klasik kontrol yöntemleriyle modellenmesi güç olan sistemler için YSA destekli veri odaklı modelleme yaklaşımlarının kontrolcü tasarımında nasıl kullanılabileceğini göstermektir. Örnek sistem olarak, diferansiyel denklem temelli bir DC motor kullanılmıştır.
+
+\section{Modelleme ve Veri Toplama}
+DC motorun matematiksel modeli aşağıdaki şekilde tanımlanır:
+
+\[
+\dot{x} = Ax + Bu,\quad y = Cx + Du
+\]
+
+Motorun sürekli zamanlı durumu:
+
+\[
+A = \begin{bmatrix}
+-\frac{R}{L} & -\frac{K_e}{L} \\
+\frac{K_t}{J} & -\frac{B}{J}
+\end{bmatrix}, \quad
+B = \begin{bmatrix}
+\frac{1}{L} \\
+0
+\end{bmatrix}
+\]
+
+Bu model Euler ayrıklaştırması ile simülasyonlara hazır hale getirilmiştir. Eğitim verisi oluşturmak için sistemin girişine rastgele sinyaller uygulanmış ve karşılık gelen akım (\(i\)) ve açısal hız (\(\omega\)) verileri toplanmıştır.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{331550cc-e521-49f4-a342-fab9fad6a929.png}
+  \caption{Veri Toplama: Uygulanan Giriş ve Çıkış (Açısal Hız)}
+\end{figure}
+
+\section{Yapay Sinir Ağı ile Model Öğrenme}
+Toplanan veriler kullanılarak giriş-çıkış ilişkisini öğrenecek şekilde bir yapay sinir ağı eğitilmiştir. Giriş vektörü: \( z = [i(k), \omega(k), u(k)] \) ve çıktı vektörü \( x(k+1) = [i(k+1), \omega(k+1)] \) olacak şekilde modelleme yapılmıştır.
+
+Kayıp fonksiyonu olarak Ortalama Kare Hata (MSE) kullanılmıştır:
+
+\[
+\mathcal{L} = \frac{1}{N} \sum_{k=1}^{N} \| \hat{y}_k - y_k \|^2
+\]
+
+Eğitim ve test kayıplarının eğrisi aşağıda verilmiştir.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{eigitim_test_kayiplari.png}
+  \caption{Eğitim ve Test Kayıpları}
+\end{figure}
+
+\section{Açık Çevrim Doğrulama}
+Eğitilen NN modeli, ayrı bir test seti üzerinde doğrulanmıştır.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{nn_acik_cevrim_dogrulama.png}
+  \caption{NN Açık Çevrim Doğrulama Sonuçları}
+\end{figure}
+
+\section{Model Predictive Control Tasarımı}
+
+\subsection{Klasik MPC}
+Gerçek model bilgisi (sistem matrisleri A ve B) kullanılarak klasik bir MPC yapılandırılmıştır. Hedef açısal hız 0.1 rad/s olarak belirlenmiştir.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{true_model_mpc.png}
+  \caption{Gerçek Model ile MPC Kontrolü Sonuçları}
+\end{figure}
+
+\subsection{NN Destekli MPC - Doğrudan Kullanım}
+Eğitilen sinir ağı modeli doğrudan MPC içinde kullanılmıştır.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{nn_model_mpc1.png}
+  \caption{NN Modeli ile MPC Kontrolü (Lineerleştirme Yok)}
+\end{figure}
+
+\subsection{NN Destekli MPC - Lineerleştirilmiş}
+Her zaman adımında modelin girdi etrafında Jacobian matrisleri hesaplanarak elde edilen lokal doğrusal model kullanılmıştır.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{nn_model_mpc2.png}
+  \caption{NN Modeli ile MPC Kontrolü (Jacobian Yaklaşımı)}
+\end{figure}
+
+\section{Sonuçların Değerlendirilmesi}
+
+\textbf{Hedef Takibi:} Açısal hız 0.1 rad/s'ye yaklaşık 2.5s'de ulaşmaktadır. Başlangıçta salınımlar olsa da sonuç stabildir.
+
+\textbf{Kontrol Sinyali:} Voltaj, sıfır civarında değil, sistemin dinamiğine uygun şekilde 2.2V civarında kararlı hale gelmiştir.
+
+\textbf{Yorum:} NN destekli MPC, daha yavaş yanıt göstermektedir. Bu durum:
+\begin{itemize}
+    \item NN modelin yaklaşık olması,
+    \item Lineerleştirmenin sadece lokal doğruluk sunması,
+    \item Kararlılığı sağlamak için daha tutucu parametre ayarlarının yapılması,
+\end{itemize}
+nedeniyle oldukça doğaldır.
+
+\textbf{Açıklama:} Gerçek model MPC, sistem dinamiğini tam bilir. NN model hataları MPC'nin daha dikkatli davranmasına sebep olur. Bu da biraz daha yavaş ama güvenli sonuç anlamına gelir.
+
+\section{Neden NN-MPC Kullanılır?}
+
+NN destekli MPC'nin tercih edilmesinin ana nedenleri şunlardır:
+
+\begin{itemize}
+    \item Karmaşık ve doğrusal olmayan sistemlerin modellenmesi,
+    \item Fiziksel modeli elde etmenin zor veya imkânsız olduğu durumlar,
+    \item Veriye dayalı sistem kontrolü imkânı sunması,
+    \item Parametre belirsizliklerine karşı dayanıklılık sağlaması.
+\end{itemize}
+
+Bu çalışmada, basit bir sistemde bile NN destekli MPC'nin başarıyla uygulanabileceği ve daha karmaşık sistemlerde kullanılmak üzere güçlü bir temel oluşturabileceği gösterilmiştir.
+
+\end{document}
